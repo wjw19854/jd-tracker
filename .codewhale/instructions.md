@@ -46,7 +46,7 @@
 | `JD_TRACKER_RISK_CONTROL_MAX_RETRIES` | `2` | 风控检测后重试次数 |
 | `JD_TRACKER_RISK_CONTROL_RETRY_DELAY_SECONDS` | `300` | 风控重试等待间隔 |
 | `JD_TRACKER_JITTER_RATIO` | `0.3` | 随机抖动比例 |
-| `JD_TRACKER_CHROME_CHANNEL` | `chrome` | 浏览器 channel（`chrome`=系统 Chrome，空=回退 Chromium） |
+| `JD_TRACKER_CHROME_CHANNEL` | (空) | 浏览器 channel（`chrome`=系统 Chrome，空=默认 Chromium） |
 | `JD_TRACKER_CDP_URL` | (空) | CDP 连接地址，非空时优先使用（备选方案） |
 | `JD_TRACKER_LOGIN_MAX_RETRIES` | `30` | 登录检测最大重试次数（v0.2.0 从 5 上调） |
 
@@ -98,6 +98,15 @@ parser.py 三级回退：
 | `test_storage.py` | JSONL 读写、容错、覆盖 |
 | `test_monitor.py` | 12 种变化场景（增/删/价涨/价跌/量变/库存/组合/边界） |
 | `test_parser_js.py` | 提取所有 page.evaluate 中的 JS，验证括号平衡 + Node.js 语法检查 |
+
+## Docker 部署（v0.2.1）
+
+- 使用 Playwright 官方 Python 镜像 (`mcr.microsoft.com/playwright/python:v1.55.0-noble`)
+- 镜像已包含 Chromium + 系统依赖，不再需要系统 Chrome
+- `docker/Dockerfile`：构建镜像，安装 playwright-stealth
+- `docker/docker-compose.yml`：数据卷挂载、环境变量、restart 策略
+- `docker/entrypoint.sh`：定时循环脚本，支持 `JD_TRACKER_INTERVAL` 配置
+- 首次使用需在有头模式下获取 `auth.json`，然后复制到服务器挂载的 `data/` 目录
 
 ## uv 缓存问题
 

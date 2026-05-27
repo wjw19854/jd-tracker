@@ -26,7 +26,7 @@ class Config:
     )
     # 浏览器 channel：chrome（系统 Chrome）| ""（Playwright 默认 Chromium）
     chrome_channel: str = field(
-        default_factory=lambda: os.environ.get("JD_TRACKER_CHROME_CHANNEL", "chrome")
+        default_factory=lambda: os.environ.get("JD_TRACKER_CHROME_CHANNEL", "")
     )
     # CDP 连接地址（如 http://localhost:9222），非空时优先使用 CDP 连接
     cdp_url: str = field(

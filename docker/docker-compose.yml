@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  jd-tracker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: jd-tracker:latest
+    container_name: jd-tracker
+    restart: unless-stopped
+    environment:
+      # 执行间隔（秒），默认 1800 = 30 分钟
+      - JD_TRACKER_INTERVAL=1800
+      # 浏览器配置
+      - JD_TRACKER_HEADLESS=true
+      - JD_TRACKER_CHROME_CHANNEL=
+      # 数据目录
+      - JD_TRACKER_DATA_DIR=/app/data
+      - JD_TRACKER_LOG_DIR=/app/logs
+      # 登录重试（headless 下设置较小值，省得出问题等太久）
+      - JD_TRACKER_LOGIN_MAX_RETRIES=5
+    volumes:
+      # 持久化数据（快照 + 登录态）
+      - ../data:/app/data
+      # 日志
+      - ../logs:/app/logs

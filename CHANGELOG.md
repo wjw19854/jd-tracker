@@ -50,12 +50,35 @@ All notable changes to this project will be documented in this file.
 #### 配置变更 (`config.py`)
 - `login_max_retries`: 5 → 30
 - 新增 `risk_control_max_retries` (2)、`risk_control_retry_delay_seconds` (300)、`jitter_ratio` (0.3)
-- 新增 `chrome_channel` (`"chrome"`)、`cdp_url` (空)
+- 新增 `chrome_channel` (空=Chromium)、`cdp_url` (空)
 
 #### 文档
 - README.md 补充反检测加固说明、新增环境变量表
 - .codewhale/instructions.md 更新开发笔记和已知问题
 - 新增 CHANGELOG.md
+
+---
+
+## [0.2.1] - 2026-05-27
+
+### Docker 部署
+
+- 新增 `docker/Dockerfile`（基于 Playwright 官方 Python 镜像 `v1.55.0-noble`）
+- 新增 `docker/docker-compose.yml`（数据卷挂载、restart 策略）
+- 新增 `docker/entrypoint.sh`（定时循环，支持 `JD_TRACKER_INTERVAL` 配置）
+- 新增 `docker/README.md`（部署 + Docker Hub 推送说明）
+
+### 修复
+
+- `chrome_channel` 默认回退为空字符串（Playwright 默认 Chromium）
+  验证确认 `page.route` CDP Fetch 反检测在 Chromium 下同样有效，
+  不再强制依赖系统 Chrome
+- 网络日志降为 DEBUG 级别（避免正常模式刷屏）
+
+### 文档
+
+- README.md 新增 Docker 部署章节
+- .codewhale/instructions.md 补充 Docker 部署信息
 
 ---
 

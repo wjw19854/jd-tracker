@@ -78,7 +78,7 @@ options:
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
 | `JD_TRACKER_HEADLESS` | `false` | 无头模式 |
-| `JD_TRACKER_CHROME_CHANNEL` | `chrome` | 浏览器 channel（`chrome`=系统 Chrome，空=默认 Chromium） |
+| `JD_TRACKER_CHROME_CHANNEL` | (空) | 浏览器 channel（`chrome`=系统 Chrome，空=默认 Chromium） |
 | `JD_TRACKER_CDP_URL` | (空) | CDP 连接地址（如 `http://localhost:9222`），非空时优先使用 |
 | `JD_TRACKER_CART_URL` | `https://cart.jd.com/cart_index` | 购物车 URL |
 | `JD_TRACKER_STORAGE_STATE` | `data/auth.json` | 登录态持久化文件 |
@@ -169,3 +169,31 @@ uv run jd-tracker --headless
 无头模式运行的前提是已经有头模式登录了京东账号，且登录态持久化到了 `data/auth.json` 文件中。
 
 如果要在服务器托管运行，需要先将 `data/auth.json` 文件复制到 `data/` 目录下，即可在无头模式下运行。
+
+## Docker 部署
+
+项目包含完整的 Docker 配置，支持一键部署到服务器。详细说明见 [`docker/README.md`](docker/README.md)。
+
+### 快速启动
+
+```bash
+# 1. 本地有头模式登录一次，获取 auth.json
+uv run jd-tracker
+
+# 2. 构建并启动
+cd docker
+docker compose up -d
+
+# 3. 查看日志
+docker compose logs -f
+```
+
+### 构建并推送 Docker 镜像
+
+```bash
+docker build -t yourusername/jd-tracker:latest -f docker/Dockerfile .
+docker push yourusername/jd-tracker:latest
+```
+
+配置项通过 `docker-compose.yml` 中的环境变量设置（前缀 `JD_TRACKER_`），详见上方环境变量表。
+
