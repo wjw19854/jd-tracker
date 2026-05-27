@@ -54,6 +54,7 @@ tail -f ../logs/jd_tracker.log
 | `JD_TRACKER_CHROME_CHANNEL` | (空) | 浏览器 channel，空=Playwright Chromium |
 | `JD_TRACKER_LOGIN_MAX_RETRIES` | `5` | 登录检测最大重试次数 |
 | `JD_TRACKER_JITTER_RATIO` | `0.3` | 随机抖动比例 |
+| `JD_TRACKER_ACTIVE_HOURS` | (空=全天) | 活跃时间段，如 `8-23` 仅 08:00-22:59 运行 |
 
 ## 构建并推送到 Docker Hub
 

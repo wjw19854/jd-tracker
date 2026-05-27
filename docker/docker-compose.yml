@@ -11,6 +11,8 @@ services:
     environment:
       # 执行间隔（秒），默认 1800 = 30 分钟
       - JD_TRACKER_INTERVAL=1800
+      # 活跃时间段（小时范围），如 "8-23" = 仅 08:00-22:59 运行，空=全天
+      # - JD_TRACKER_ACTIVE_HOURS=8-23
       # 浏览器配置
       - JD_TRACKER_HEADLESS=true
       - JD_TRACKER_CHROME_CHANNEL=
