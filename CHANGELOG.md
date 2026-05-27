@@ -63,10 +63,11 @@ All notable changes to this project will be documented in this file.
 
 ### Docker 部署
 
-- 新增 `docker/Dockerfile`（基于 Playwright 官方 Python 镜像 `v1.55.0-noble`）
-- 新增 `docker/docker-compose.yml`（数据卷挂载、restart 策略）
-- 新增 `docker/entrypoint.sh`（定时循环，支持 `JD_TRACKER_INTERVAL` 配置）
-- 新增 `docker/README.md`（部署 + Docker Hub 推送说明）
+- 新增 `docker/Dockerfile`（基于 Playwright 官方 Python 镜像 `v1.60.0-noble`）
+- 新增 `docker/docker-compose.yml`（数据卷挂载、restart 策略，卷映射到 compose 同级目录）
+- 新增 `docker/entrypoint.sh`（定时循环 + `JD_TRACKER_INTERVAL` + `JD_TRACKER_ACTIVE_HOURS` 时间段控制）
+- 新增 `docker/push.sh`（构建 + 打版本标签 + 推送到 Docker Hub）
+- 新增 `docker/README.md`（服务器部署完整流程：scp 上传、首次 auth.json 导入、后续更新）
 
 ### 修复
 
@@ -74,6 +75,9 @@ All notable changes to this project will be documented in this file.
   验证确认 `page.route` CDP Fetch 反检测在 Chromium 下同样有效，
   不再强制依赖系统 Chrome
 - 网络日志降为 DEBUG 级别（避免正常模式刷屏）
+- Dockerfile playwright 版本冲突修复（基础镜像 v1.55→v1.60）
+- entrypoint.sh：修复 `bc` 缺失、`local` 语法错误，替换为纯 shell 算术
+- docker-compose.yml：移除废弃的 `version` 字段
 
 ### 文档
 

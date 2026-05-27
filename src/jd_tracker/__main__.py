@@ -214,7 +214,7 @@ def main(argv: list[str] | None = None) -> None:
 
     setup_logging(config, verbose=args.verbose)
 
-    logger.info("🚀 jd-tracker v0.2.0 启动")
+    logger.info("🚀 jd-tracker v0.2.1 启动")
     logger.info("配置: headless=%s, cart_url=%s", config.headless, config.cart_url)
 
     if args.dry_run:

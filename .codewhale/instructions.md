@@ -101,7 +101,7 @@ parser.py 三级回退：
 
 ## Docker 部署（v0.2.1）
 
-- 使用 Playwright 官方 Python 镜像 (`mcr.microsoft.com/playwright/python:v1.55.0-noble`)
+- 使用 Playwright 官方 Python 镜像 (`mcr.microsoft.com/playwright/python:v1.60.0-noble`)
 - 镜像已包含 Chromium + 系统依赖，不再需要系统 Chrome
 - `docker/Dockerfile`：构建镜像，安装 playwright-stealth
 - `docker/docker-compose.yml`：数据卷挂载、环境变量、restart 策略
