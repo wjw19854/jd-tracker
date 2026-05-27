@@ -108,8 +108,8 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
     browser = BrowserManager(config)
 
     try:
-        # 1. 启动浏览器（dump-html 时启用网络诊断）
-        page = await browser.start(capture_network=dump_html)
+        # 1. 启动浏览器（始终启用 page.route 反检测）
+        page = await browser.start(capture_network=True)
 
         # 2. 预热：先访问京东首页，降低机器人特征
         await warmup_browser(page, config)

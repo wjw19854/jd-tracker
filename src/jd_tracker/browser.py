@@ -294,7 +294,7 @@ class BrowserManager:
                 try:
                     body = await response.text()
                     preview = body[:300] if body else "(empty)"
-                    logger.info(
+                    logger.debug(
                         "[NET] ← %s %s status=%d body_preview=%s",
                         response.request.method,
                         url[:100],
@@ -302,7 +302,7 @@ class BrowserManager:
                         preview,
                     )
                 except Exception:
-                    logger.info(
+                    logger.debug(
                         "[NET] ← %s %s status=%d",
                         response.request.method,
                         url[:100],
