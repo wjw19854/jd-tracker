@@ -38,8 +38,10 @@ All notable changes to this project will be documented in this file.
 - 登录后触发风控：不再立即退出，等待后重试
 - 风控重试不消耗登录检测次数
 
-#### 网络诊断 (`browser.py` + `__main__.py`)
-- `--dump-html` 时拦截购物车 API 请求/响应，记录 URL + status + body 到日志
+#### CDP Fetch 反检测 (`browser.py` + `__main__.py`)
+- `page.route("**/*")` 启用 CDP Fetch 域，改变底层网络栈，意外帮助绕过京东检测
+- 始终启用（不再依赖 `--dump-html`），消除有/无参数的行为差异
+- 网络日志降为 DEBUG 级别，`--verbose` 时可查看
 
 #### 代码去重 (`login.py`)
 - 删除 `login._detect_risk` 和重复的 `_RISK_KEYWORDS`
