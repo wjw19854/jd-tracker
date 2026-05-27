@@ -7,6 +7,49 @@
 项目已可用，核心流程稳定：
 - 登录 → 预热 → 购物车 → 风控检测 → 虚拟列表分段滚动 → JS 解析 → 快照对比
 
+## v0.2.0 反检测加固（2026-05-27）
+
+针对京东风控触发验证码的问题，实施了五层反检测加固：
+
+### 1. 浏览器指纹随机化（browser.py）
+- **随机 UA 池**：6 个真实 Chrome macOS UA（128-133），每次启动随机选用
+- **随机 viewport**：4 种常见 Mac 分辨率（1440x900, 1280x800, 1680x1050, 1366x768）
+- **二次 webdriver 覆盖**：在 playwright-stealth 之后注入额外 JS，覆盖 `navigator.webdriver`、`permissions.query` 等 API
+- **验证机制**：启动后立即读取 `navigator.webdriver` 确认覆盖成功，失败时输出 WARNING
+
+### 2. 人类行为模拟（cart.py）
+- **预热增强**：首页访问后增加鼠标移动到页面中央（steps=5-15）、平滑滚动 + 小幅回滚
+- **`human_like_idle()`**：在登录等待和风控重试期间替代纯 `sleep`，间歇性地微调滚动 ±80px 或移动鼠标
+- **操作间隔随机化**：每次空闲操作间隔 3-8 秒（带 ±30% 抖动）
+
+### 3. 时间随机化（全局）
+- **`_jitter(base, ratio)`** 工具函数：所有 `asyncio.sleep` 替换为 `_jitter`，默认 ±30% 偏移
+- 预热等待、购物车导航前后、滚动跳转等待、登录重试间隔全部随机化
+
+### 4. HTTP 请求头增强（browser.py）
+- 补全真实浏览器头：`Accept`、`Accept-Encoding`、`Cache-Control`
+- 动态构造 `Sec-CH-UA` / `Sec-CH-UA-Platform` / `Sec-CH-UA-Mobile`
+- `Upgrade-Insecure-Requests`
+
+### 5. 风控重试策略（__main__.py + config.py）
+- 检测到验证码后不再立即退出，而是等待 120s（可配置）后重试
+- 重试次数默认 2 次（`JD_TRACKER_RISK_CONTROL_MAX_RETRIES`）
+- 等待期间调用 `human_like_idle` 模拟轻度浏览
+
+### 6. 代码去重（login.py）
+- 删除 `login._detect_risk` 和重复的 `_RISK_KEYWORDS`
+- 统一引用 `cart.detect_risk_control`
+
+### 新增配置项
+| 环境变量 | 默认值 | 说明 |
+|----------|--------|------|
+| `JD_TRACKER_RISK_CONTROL_MAX_RETRIES` | `2` | 风控检测后重试次数 |
+| `JD_TRACKER_RISK_CONTROL_RETRY_DELAY_SECONDS` | `300` | 风控重试等待间隔 |
+| `JD_TRACKER_JITTER_RATIO` | `0.3` | 随机抖动比例 |
+| `JD_TRACKER_CHROME_CHANNEL` | `chrome` | 浏览器 channel（`chrome`=系统 Chrome，空=回退 Chromium） |
+| `JD_TRACKER_CDP_URL` | (空) | CDP 连接地址，非空时优先使用（备选方案） |
+| `JD_TRACKER_LOGIN_MAX_RETRIES` | `30` | 登录检测最大重试次数（v0.2.0 从 5 上调） |
+
 ## 已知待改进
 
 ### 1. headless 模式在 macOS sandbox 下 crash (SIGSEGV)
@@ -14,7 +57,10 @@
 - 原因：sandbox 限制了 Chromium headless shell 的内存访问
 - 后续：CI 环境或 Linux 下 headless 可正常工作
 
-### 2. 虚拟列表滚动可能不完整
+### 2. 系统 Chrome navigator.webdriver 检测逻辑（已修复 v0.2.0）
+- JS `undefined` → Python `None`，之前误报 WARNING，已修正判断逻辑
+
+### 3. 虚拟列表滚动可能不完整
 - 京东购物车使用 React 虚拟列表，当前用分段跳转（10 段 + 反向）覆盖
 - 如果商品超过 ~200 件可能需要增加段数
 - 日志中 `最大高度` 可以指示是否正确到达底部

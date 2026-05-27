@@ -8,10 +8,24 @@
 - 📊 对比历史快照，检测价格波动、商品增减、数量变化
 - 🏪 识别无货/预约/下架/失效等不可购买状态
 - 🔐 智能登录检测，未登录时提示用户手动登录并等待重试
-- 🛡️ playwright-stealth 反检测 + 首页预热 + 风控自动识别
+- 🛡️ 多层反检测加固（随机 UA、viewport 随机化、webdriver 覆盖、人类行为模拟、请求头伪装）
+- 🧠 登录等待期间模拟轻度浏览，防止长时间无操作触发风控
+- 🔄 风控检测后自动等待重试，而非立即退出
 - 📜 分段跳转滚动覆盖虚拟列表，确保懒加载商品全部渲染
 - 💾 JSONL 文件持久化快照数据
 - 📝 结构化日志输出（控制台 + 文件）
+
+## 反检测加固
+
+v0.2.0 起引入五层反检测策略，降低京东风控触发概率：
+
+| 层级 | 措施 | 位置 |
+|------|------|------|
+| 浏览器指纹 | 随机 UA 池（6 个真实 Chrome macOS UA）、随机 viewport（4 种常见分辨率）、webdriver 二次覆盖验证 | `browser.py` |
+| 行为模拟 | 预热阶段鼠标移动 + 平滑滚动、登录等待期间间歇性轻量交互 | `cart.py` → `human_like_idle()` |
+| 时间随机化 | 所有等待操作加 ±30% 随机抖动（`_jitter`），登录重试间隔随机化 | `cart.py`, `login.py` |
+| HTTP 头伪装 | 补全 Accept / Sec-CH-UA / Sec-CH-UA-Platform / Upgrade-Insecure-Requests | `browser.py` |
+| 风控响应 | 检测到验证码后等待重试（默认 2 次 × 120s），期间模拟轻度浏览 | `__main__.py` |
 
 ## 环境要求
 
@@ -64,10 +78,15 @@ options:
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
 | `JD_TRACKER_HEADLESS` | `false` | 无头模式 |
+| `JD_TRACKER_CHROME_CHANNEL` | `chrome` | 浏览器 channel（`chrome`=系统 Chrome，空=默认 Chromium） |
+| `JD_TRACKER_CDP_URL` | (空) | CDP 连接地址（如 `http://localhost:9222`），非空时优先使用 |
 | `JD_TRACKER_CART_URL` | `https://cart.jd.com/cart_index` | 购物车 URL |
 | `JD_TRACKER_STORAGE_STATE` | `data/auth.json` | 登录态持久化文件 |
-| `JD_TRACKER_LOGIN_MAX_RETRIES` | `5` | 登录检测最大重试次数 |
+| `JD_TRACKER_LOGIN_MAX_RETRIES` | `30` | 登录检测最大重试次数 |
 | `JD_TRACKER_LOGIN_WAIT_SECONDS` | `30` | 登录等待间隔（秒） |
+| `JD_TRACKER_RISK_CONTROL_MAX_RETRIES` | `2` | 风控检测后重试次数 |
+| `JD_TRACKER_RISK_CONTROL_RETRY_DELAY_SECONDS` | `300` | 风控重试等待间隔（秒） |
+| `JD_TRACKER_JITTER_RATIO` | `0.3` | 随机抖动比例（0=无抖动，0.5=±50%） |
 | `JD_TRACKER_DATA_DIR` | `data/` | 数据目录 |
 | `JD_TRACKER_LOG_DIR` | `logs/` | 日志目录 |
 | `JD_TRACKER_NETWORK_RETRIES` | `2` | 网络请求重试次数 |
@@ -75,7 +94,7 @@ options:
 ### 定时运行（cron）
 
 ```bash
-# 每 30 分钟运行一次
+# 每 30 分钟运行一次（建议间隔不低于 15 分钟以降低风控风险）
 */30 * * * * cd /path/to/jd-tracker && uv run jd-tracker --headless >> logs/cron.log 2>&1
 ```
 
@@ -117,14 +136,16 @@ uv run python tools/debug_dom.py
 ```
 jd-tracker/
 ├── pyproject.toml
+├── README.md
+├── CHANGELOG.md
 ├── src/jd_tracker/
 │   ├── __init__.py
-│   ├── __main__.py         # CLI 入口 + 主流程编排
-│   ├── config.py           # 配置管理（dataclass + 环境变量覆盖）
+│   ├── __main__.py         # CLI 入口 + 主流程编排（含风控重试策略）
+│   ├── config.py           # 配置管理（dataclass + 环境变量覆盖 + 反检测参数）
 │   ├── models.py           # 数据模型（CartItem, ChangeRecord, CartSnapshot）
-│   ├── browser.py          # Playwright 浏览器管理 + playwright-stealth 反检测
-│   ├── login.py            # 登录检测（多策略 + 风控识别 + 5次×30s 重试）
-│   ├── cart.py             # 购物车导航、预热、风控检测、虚拟列表分段滚动
+│   ├── browser.py          # Playwright 浏览器管理 + 多层反检测（UA/viewport/webdriver/HTTP头）
+│   ├── login.py            # 登录检测（多策略 + 风控识别 + 随机延迟重试）
+│   ├── cart.py             # 购物车导航、预热、行为模拟（human_like_idle）、虚拟列表分段滚动
 │   ├── parser.py           # 商品解析（JS 变量 → JS DOM → Python DOM 三级回退）
 │   ├── storage.py          # JSONL 文件读写
 │   └── monitor.py          # 快照对比引擎 + 变化报告

@@ -24,6 +24,14 @@ class Config:
     headless: bool = field(
         default_factory=lambda: _env_bool("JD_TRACKER_HEADLESS", False)
     )
+    # 浏览器 channel：chrome（系统 Chrome）| ""（Playwright 默认 Chromium）
+    chrome_channel: str = field(
+        default_factory=lambda: os.environ.get("JD_TRACKER_CHROME_CHANNEL", "chrome")
+    )
+    # CDP 连接地址（如 http://localhost:9222），非空时优先使用 CDP 连接
+    cdp_url: str = field(
+        default_factory=lambda: os.environ.get("JD_TRACKER_CDP_URL", "")
+    )
     browser_timeout_ms: int = field(
         default_factory=lambda: _env_int("JD_TRACKER_BROWSER_TIMEOUT_MS", 30_000)
     )
@@ -36,7 +44,7 @@ class Config:
 
     # --- 登录 ---
     login_max_retries: int = field(
-        default_factory=lambda: _env_int("JD_TRACKER_LOGIN_MAX_RETRIES", 5)
+        default_factory=lambda: _env_int("JD_TRACKER_LOGIN_MAX_RETRIES", 30)
     )
     login_wait_seconds: int = field(
         default_factory=lambda: _env_int("JD_TRACKER_LOGIN_WAIT_SECONDS", 30)
@@ -75,6 +83,19 @@ class Config:
         default_factory=lambda: _env_int("JD_TRACKER_NETWORK_RETRY_DELAY_SECONDS", 5)
     )
 
+    # --- 风控重试 ---
+    risk_control_max_retries: int = field(
+        default_factory=lambda: _env_int("JD_TRACKER_RISK_CONTROL_MAX_RETRIES", 2)
+    )
+    risk_control_retry_delay_seconds: int = field(
+        default_factory=lambda: _env_int("JD_TRACKER_RISK_CONTROL_RETRY_DELAY_SECONDS", 300)
+    )
+
+    # --- 随机抖动 ---
+    jitter_ratio: float = field(
+        default_factory=lambda: _env_float("JD_TRACKER_JITTER_RATIO", 0.3)
+    )
+
     @property
     def snapshot_path(self) -> str:
         """购物车快照文件路径。"""
@@ -104,6 +125,16 @@ def _env_int(key: str, default: int) -> int:
         return default
     try:
         return int(val)
+    except ValueError:
+        return default
+
+
+def _env_float(key: str, default: float) -> float:
+    val = os.environ.get(key)
+    if val is None:
+        return default
+    try:
+        return float(val)
     except ValueError:
         return default
 

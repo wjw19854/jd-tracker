@@ -1,4 +1,8 @@
-"""登录检测与等待手动登录的重试循环。"""
+"""登录检测与等待手动登录的重试循环。
+
+在等待期间通过 human_like_idle 维持人类行为特征，
+降低长时间无操作触发风控的风险。
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,7 @@ import logging
 
 from playwright.async_api import Page
 
+from jd_tracker.cart import detect_risk_control, human_like_idle
 from jd_tracker.config import Config
 
 logger = logging.getLogger(__name__)
@@ -22,29 +27,6 @@ _LOGIN_INDICATORS = [
     'a:has-text("去结算")',
     'button:has-text("结算")',
 ]
-
-# 风控关键词（一致复用 cart.py 中的定义）
-_RISK_KEYWORDS = [
-    "操作过于频繁",
-    "休息一下",
-    "请稍后再试",
-    "访问太频繁",
-    "触发流量防控",
-    "请输入验证码",
-    "验证码",
-]
-
-
-async def _detect_risk(page: Page) -> tuple[bool, str]:
-    """快速风控检测，复用 cart.py 中的逻辑。"""
-    try:
-        body_text = await page.inner_text("body")
-        for kw in _RISK_KEYWORDS:
-            if kw in body_text:
-                return True, kw
-    except Exception:
-        pass
-    return False, ""
 
 
 async def _is_logged_in(page: Page) -> bool:
@@ -92,17 +74,35 @@ async def ensure_login(page: Page, config: Config) -> bool:
 
     检测登录状态，未登录时提示并等待用户手动登录。
     最多重试 config.login_max_retries 次。
-    如果检测到风控页面，立即终止。
+    等待期间通过 human_like_idle 模拟轻度浏览行为，防止风控。
+    检测到风控时不会立即退出，而是等待后重试（最多 risk_control_max_retries 次）。
 
     Returns:
-        True 表示已登录，False 表示重试耗尽或触发风控。
+        True 表示已登录，False 表示重试耗尽或风控重试耗尽。
     """
+    import random
+
+    risk_retries = 0
+
     for attempt in range(1, config.login_max_retries + 1):
         # 先检测风控
-        is_risk, kw = await _detect_risk(page)
+        is_risk, kw = await detect_risk_control(page)
         if is_risk:
-            logger.error("❌ 登录检测中触发风控 ('%s')，无法继续", kw)
-            return False
+            if risk_retries < config.risk_control_max_retries:
+                risk_retries += 1
+                logger.warning(
+                    "⚠️  登录检测中触发风控 ('%s')，第 %d/%d 次，"
+                    "等待 %.0f 秒后重试...",
+                    kw,
+                    risk_retries,
+                    config.risk_control_max_retries,
+                    config.risk_control_retry_delay_seconds,
+                )
+                await human_like_idle(page, config.risk_control_retry_delay_seconds, config)
+                continue  # 不消耗登录重试次数，直接重新检测
+            else:
+                logger.error("❌ 风控重试耗尽 ('%s')，已重试 %d 次", kw, risk_retries)
+                return False
 
         logged_in = await _is_logged_in(page)
 
@@ -111,14 +111,18 @@ async def ensure_login(page: Page, config: Config) -> bool:
             return True
 
         if attempt < config.login_max_retries:
+            # 带随机抖动的等待时间
+            jittered_wait = config.login_wait_seconds * (1.0 + random.uniform(-config.jitter_ratio, config.jitter_ratio))
             logger.warning(
                 "⚠️  未检测到登录状态 (第 %d/%d 次)，请在浏览器窗口中手动登录。"
-                "等待 %d 秒后重新检测...",
+                "等待 %.0f 秒后重新检测...",
                 attempt,
                 config.login_max_retries,
-                config.login_wait_seconds,
+                jittered_wait,
             )
-            await asyncio.sleep(config.login_wait_seconds)
+
+            # 等待期间模拟低强度浏览，替代纯 sleep
+            await human_like_idle(page, jittered_wait, config)
         else:
             logger.error(
                 "❌ 登录检测失败，已重试 %d 次，退出。",

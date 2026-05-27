@@ -19,6 +19,7 @@ from jd_tracker.browser import BrowserManager
 from jd_tracker.cart import (
     detect_risk_control,
     dump_page_html,
+    human_like_idle,
     navigate_to_cart,
     scroll_to_bottom,
     take_debug_screenshot,
@@ -107,8 +108,8 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
     browser = BrowserManager(config)
 
     try:
-        # 1. 启动浏览器
-        page = await browser.start()
+        # 1. 启动浏览器（dump-html 时启用网络诊断）
+        page = await browser.start(capture_network=dump_html)
 
         # 2. 预热：先访问京东首页，降低机器人特征
         await warmup_browser(page, config)
@@ -128,14 +129,23 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
             await take_debug_screenshot(page, config, "03_login_failed")
             return 2
 
-        # 5. 风控检测（登录成功后也可能触发风控）
-        is_risk, kw = await detect_risk_control(page)
-        if is_risk:
-            logger.error("❌ 检测到风控拦截: '%s'", kw)
-            logger.warning("触发原因可能是: 1) 请求频率过高 2) 浏览器指纹泄露")
-            logger.warning("建议: 1) 降低运行频率 2) 使用有头模式 3) 减少同时打开的标签页")
-            await take_debug_screenshot(page, config, "03_risk_control")
-            return 4
+        # 5. 风控检测（登录成功后也可能触发风控，加入重试策略）
+        for risk_attempt in range(1, config.risk_control_max_retries + 1):
+            is_risk, kw = await detect_risk_control(page)
+            if not is_risk:
+                break  # 未触发风控，继续执行
+
+            logger.warning("⚠️  检测到风控拦截 ('%s')，第 %d/%d 次尝试", kw, risk_attempt, config.risk_control_max_retries)
+            await take_debug_screenshot(page, config, f"03_risk_control_{risk_attempt}")
+
+            if risk_attempt < config.risk_control_max_retries:
+                logger.info("等待 %.0f 秒后重试（模拟轻度浏览降低风控风险）...", config.risk_control_retry_delay_seconds)
+                await human_like_idle(page, config.risk_control_retry_delay_seconds, config)
+            else:
+                logger.error("❌ 风控重试耗尽 ('%s')，无法继续", kw)
+                logger.warning("触发原因可能是: 1) 请求频率过高 2) 浏览器指纹泄露 3) 短时间内多次运行")
+                logger.warning("建议: 1) 降低运行频率 2) 使用有头模式 3) 更换 IP 4) 等待 10+ 分钟后重试")
+                return 4
 
         if screenshot:
             await take_debug_screenshot(page, config, "03_logged_in")
@@ -204,7 +214,7 @@ def main(argv: list[str] | None = None) -> None:
 
     setup_logging(config, verbose=args.verbose)
 
-    logger.info("🚀 jd-tracker v0.1.0 启动")
+    logger.info("🚀 jd-tracker v0.2.0 启动")
     logger.info("配置: headless=%s, cart_url=%s", config.headless, config.cart_url)
 
     if args.dry_run:
