@@ -59,6 +59,7 @@ class ChangeRecord:
     sku_id: str
     name: str
     detail: str  # 人类可读的变化描述
+    model: str = ""
     old_price: Decimal | None = None
     new_price: Decimal | None = None
     old_quantity: int | None = None

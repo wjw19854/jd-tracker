@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-05-27
+
+### 降价通知（PushPlus）
+
+- 新增 `notifier.py`：`Notifier` 抽象基类 + `PushPlusNotifier` 实现 + `create_notifier` 工厂函数
+- 检测到购物车价格下跌时，通过 PushPlus 推送微信通知
+- 通知内容包含降价商品名称、型号、原价/现价、降幅金额和百分比
+- 支持群组推送（`JD_TRACKER_NOTIFY_PUSHPLUS_TOPIC`）
+- 框架预留 Webhook 扩展点（飞书/企业微信/钉钉群机器人）
+- 零外部依赖，仅使用 Python 标准库 `urllib`
+
+### 异常告警通知
+
+- 四种异常场景自动推送告警：登录失败、风控拦截、购物车加载超时、购物车为空
+- 每种异常每天最多发送 3 次（内存计数，进程重启后自动重置）
+- 不启用通知时完全静默，不影响现有用户
+
+### 新增配置项
+
+| 环境变量 | 默认值 | 说明 |
+|----------|--------|------|
+| `JD_TRACKER_NOTIFY_ENABLED` | `false` | 启用/关闭通知 |
+| `JD_TRACKER_NOTIFY_PUSHPLUS_TOKEN` | (空) | PushPlus token |
+| `JD_TRACKER_NOTIFY_PUSHPLUS_TOPIC` | (空) | PushPlus 群组编号 |
+| `JD_TRACKER_NOTIFY_PRICE_DROP_ONLY` | `true` | 仅通知降价 |
+| `JD_TRACKER_NOTIFY_WEBHOOK_URL` | (空) | Webhook URL（预留） |
+| `JD_TRACKER_NOTIFY_WEBHOOK_TYPE` | (空) | Webhook 类型（预留） |
+
+### 模型变更
+
+- `ChangeRecord` 新增 `model` 字段（字符串，默认空），`monitor.py` 所有构造点同步更新
+
+### 测试
+
+- 新增 `tests/test_notifier.py`：9 个测试覆盖消息格式化、百分比精度、None/零值安全、JSON 结构验证
+
+---
+
 ## [0.2.0] - 2026-05-27
 
 ### 反检测加固

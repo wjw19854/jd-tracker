@@ -29,6 +29,7 @@ from jd_tracker.cart import (
 from jd_tracker.config import Config, load_config
 from jd_tracker.login import ensure_login
 from jd_tracker.monitor import compare_snapshots, print_summary, report_changes
+from jd_tracker.notifier import create_notifier
 from jd_tracker.parser import parse_cart_items
 from jd_tracker.storage import load_snapshot, save_snapshot
 
@@ -127,6 +128,12 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
         logged_in = await ensure_login(page, config)
         if not logged_in:
             await take_debug_screenshot(page, config, "03_login_failed")
+            await _send_alert(
+                config,
+                "login_failed",
+                "⚠️ 京东登录失败",
+                "多次重试后仍未检测到登录态，请手动登录后重试。",
+            )
             return 2
 
         # 5. 风控检测（登录成功后也可能触发风控，加入重试策略）
@@ -145,6 +152,13 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
                 logger.error("❌ 风控重试耗尽 ('%s')，无法继续", kw)
                 logger.warning("触发原因可能是: 1) 请求频率过高 2) 浏览器指纹泄露 3) 短时间内多次运行")
                 logger.warning("建议: 1) 降低运行频率 2) 使用有头模式 3) 更换 IP 4) 等待 10+ 分钟后重试")
+                await _send_alert(
+                    config,
+                    "risk_control",
+                    "🛡️ 京东风控拦截",
+                    f"风控重试 {config.risk_control_max_retries} 次均触发验证码。\n"
+                    "建议：降低运行频率、更换 IP、或等待 10+ 分钟后重试。",
+                )
                 return 4
 
         if screenshot:
@@ -157,6 +171,12 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
         if not await wait_for_cart_load(page, config):
             if screenshot:
                 await take_debug_screenshot(page, config, "04_load_timeout")
+            await _send_alert(
+                config,
+                "cart_load_timeout",
+                "⏱️ 购物车加载超时",
+                "等待购物车内容加载超时，可能是网络问题或页面改版。",
+            )
             return 3
 
         if screenshot:
@@ -179,6 +199,15 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
 
         logger.info("抓取完成: %d 个商品", len(current_items))
 
+        # 购物车为空告警
+        if not current_items:
+            await _send_alert(
+                config,
+                "empty_cart",
+                "🛒 购物车为空",
+                "当前购物车中没有商品，请确认是否有货或登录态是否正常。",
+            )
+
         # 9. 加载上次快照
         previous_items = load_snapshot(config.snapshot_path)
 
@@ -192,6 +221,9 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
         # 12. 保存当前快照
         save_snapshot(config.snapshot_path, current_items)
 
+        # 13. 发送降价通知（可选，不影响核心流程）
+        await _send_notifications(config, changes)
+
         return 0
 
     except KeyboardInterrupt:
@@ -202,6 +234,79 @@ async def run(config: Config, screenshot: bool = False, dump_html: bool = False)
         return 1
     finally:
         await browser.close()
+
+
+async def _send_notifications(config: Config, changes: list) -> None:
+    """发送降价通知。
+
+    仅当配置启用且有降价商品时才发送。发送失败不影响主流程。
+    """
+    if not config.notify_enabled or not changes:
+        return
+
+    notifier = create_notifier(config)
+    if notifier is None:
+        return
+
+    # 过滤目标变化
+    if config.notify_price_drop_only:
+        target = [
+            c for c in changes
+            if c.change_type == "price_changed"
+            and c.new_price is not None
+            and c.old_price is not None
+            and c.new_price < c.old_price
+        ]
+    else:
+        target = changes
+
+    if not target:
+        logger.info("📤 无降价商品，跳过通知")
+        return
+
+    try:
+        await notifier.send(target)
+    except Exception:
+        logger.warning("通知发送异常，已跳过", exc_info=True)
+
+
+# --- 异常告警限流 ---
+
+_alert_counts: dict[str, int] = {}
+
+_ALERT_MAX_PER_TYPE = 3
+
+
+async def _send_alert(
+    config: Config,
+    alert_type: str,
+    title: str,
+    message: str,
+) -> None:
+    """发送异常告警通知（带限流控制）。
+
+    每种异常类型每天最多发送 _ALERT_MAX_PER_TYPE 次。
+    计数器存储在内存中，进程重启后自动重置。
+    """
+    if not config.notify_enabled:
+        return
+
+    notifier = create_notifier(config)
+    if notifier is None:
+        return
+
+    count = _alert_counts.get(alert_type, 0)
+    if count >= _ALERT_MAX_PER_TYPE:
+        logger.debug("告警 '%s' 已达限流上限 (%d)，跳过", alert_type, _ALERT_MAX_PER_TYPE)
+        return
+
+    _alert_counts[alert_type] = count + 1
+
+    try:
+        await notifier.send_alert(title, message)
+        logger.info("📤 告警已发送 (%s): %s", alert_type, title)
+    except Exception:
+        logger.warning("告警通知发送失败 (%s)", alert_type, exc_info=True)
 
 
 def main(argv: list[str] | None = None) -> None:

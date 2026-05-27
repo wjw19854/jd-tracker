@@ -14,6 +14,7 @@
 - 📜 分段跳转滚动覆盖虚拟列表，确保懒加载商品全部渲染
 - 💾 JSONL 文件持久化快照数据
 - 📝 结构化日志输出（控制台 + 文件）
+- 🔔 降价自动通知（PushPlus 微信推送，可选）
 
 ## 反检测加固
 
@@ -90,6 +91,10 @@ options:
 | `JD_TRACKER_DATA_DIR` | `data/` | 数据目录 |
 | `JD_TRACKER_LOG_DIR` | `logs/` | 日志目录 |
 | `JD_TRACKER_NETWORK_RETRIES` | `2` | 网络请求重试次数 |
+| `JD_TRACKER_NOTIFY_ENABLED` | `false` | 启用通知推送（降价 + 异常告警） |
+| `JD_TRACKER_NOTIFY_PUSHPLUS_TOKEN` | (空) | PushPlus 通知 token（见下方说明） |
+| `JD_TRACKER_NOTIFY_PUSHPLUS_TOPIC` | (空) | PushPlus 群组编号，非空时推送到指定群组 |
+| `JD_TRACKER_NOTIFY_PRICE_DROP_ONLY` | `true` | 仅通知降价（`false` 时通知所有变化） |
 
 ### 定时运行（cron）
 
@@ -97,6 +102,40 @@ options:
 # 每 30 分钟运行一次（建议间隔不低于 15 分钟以降低风控风险）
 */30 * * * * cd /path/to/jd-tracker && uv run jd-tracker --headless >> logs/cron.log 2>&1
 ```
+
+### 降价通知（PushPlus）
+
+当购物车商品降价时，可通过 PushPlus 推送通知到微信。
+
+**配置步骤：**
+
+1. 访问 [pushplus.plus](https://www.pushplus.plus/) 微信扫码关注公众号
+2. 获取 token（首页「发送消息」→「一对一推送」）
+3. 设置环境变量：
+
+```bash
+export JD_TRACKER_NOTIFY_ENABLED=true
+export JD_TRACKER_NOTIFY_PUSHPLUS_TOKEN=your_token_here
+```
+
+4. 正常运行即可。检测到降价后会自动推送
+
+通知消息包含降价商品名称、型号、原价/现价、降幅金额和百分比。
+
+**扩展预留：** 框架已预留 Webhook 扩展点，未来可支持飞书/企业微信/钉钉群机器人通知。
+
+### 异常告警通知
+
+启用通知后，以下异常场景会自动推送告警（每种每天最多 3 次）：
+
+| 告警类型 | 触发条件 |
+|----------|---------|
+| 登录失败 | 多次重试后仍未检测到登录态 |
+| 风控拦截 | 风控重试全部耗尽 |
+| 购物车加载超时 | 等待购物车内容加载超时 |
+| 购物车为空 | 解析后购物车无商品 |
+
+告警通知无需额外配置，与降价通知共用同一个 PushPlus 通道。
 
 ## 数据文件
 
@@ -148,7 +187,8 @@ jd-tracker/
 │   ├── cart.py             # 购物车导航、预热、行为模拟（human_like_idle）、虚拟列表分段滚动
 │   ├── parser.py           # 商品解析（JS 变量 → JS DOM → Python DOM 三级回退）
 │   ├── storage.py          # JSONL 文件读写
-│   └── monitor.py          # 快照对比引擎 + 变化报告
+│   ├── monitor.py          # 快照对比引擎 + 变化报告
+│   └── notifier.py         # 降价通知（PushPlus）+ Webhook 扩展预留
 ├── tests/
 │   ├── test_models.py      # 数据模型序列化
 │   ├── test_storage.py     # JSONL 读写容错

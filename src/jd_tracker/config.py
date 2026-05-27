@@ -96,6 +96,27 @@ class Config:
         default_factory=lambda: _env_float("JD_TRACKER_JITTER_RATIO", 0.3)
     )
 
+    # --- 通知（v0.3.0）---
+    notify_enabled: bool = field(
+        default_factory=lambda: _env_bool("JD_TRACKER_NOTIFY_ENABLED", False)
+    )
+    notify_pushplus_token: str = field(
+        default_factory=lambda: os.environ.get("JD_TRACKER_NOTIFY_PUSHPLUS_TOKEN", "")
+    )
+    notify_pushplus_topic: str = field(
+        default_factory=lambda: os.environ.get("JD_TRACKER_NOTIFY_PUSHPLUS_TOPIC", "")
+    )
+    notify_price_drop_only: bool = field(
+        default_factory=lambda: _env_bool("JD_TRACKER_NOTIFY_PRICE_DROP_ONLY", True)
+    )
+    # 预留：webhook 扩展点
+    notify_webhook_url: str = field(
+        default_factory=lambda: os.environ.get("JD_TRACKER_NOTIFY_WEBHOOK_URL", "")
+    )
+    notify_webhook_type: str = field(
+        default_factory=lambda: os.environ.get("JD_TRACKER_NOTIFY_WEBHOOK_TYPE", "")
+    )
+
     @property
     def snapshot_path(self) -> str:
         """购物车快照文件路径。"""

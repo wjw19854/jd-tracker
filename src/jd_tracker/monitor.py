@@ -39,6 +39,7 @@ def compare_snapshots(
             change_type=ChangeRecord.ChangeType.ITEM_ADDED,
             sku_id=sku_id,
             name=item.name,
+            model=item.model,
             detail=f"新增商品 (价格: ¥{item.price}, 数量: {item.quantity})",
             new_price=item.price,
             new_quantity=item.quantity,
@@ -52,6 +53,7 @@ def compare_snapshots(
             change_type=ChangeRecord.ChangeType.ITEM_REMOVED,
             sku_id=sku_id,
             name=item.name,
+            model=item.model,
             detail=f"商品已移除 (原价格: ¥{item.price}, 原数量: {item.quantity})",
             old_price=item.price,
             old_quantity=item.quantity,
@@ -71,6 +73,7 @@ def compare_snapshots(
                 change_type=ChangeRecord.ChangeType.PRICE_CHANGED,
                 sku_id=sku_id,
                 name=curr_item.name,
+                model=curr_item.model,
                 detail=(
                     f"价格波动: ¥{prev_item.price} → ¥{curr_item.price} "
                     f"({sign}¥{abs(diff)})"
@@ -87,6 +90,7 @@ def compare_snapshots(
                 change_type=ChangeRecord.ChangeType.QUANTITY_CHANGED,
                 sku_id=sku_id,
                 name=curr_item.name,
+                model=curr_item.model,
                 detail=f"数量变化: {prev_item.quantity} → {curr_item.quantity} ({sign}{diff})",
                 old_quantity=prev_item.quantity,
                 new_quantity=curr_item.quantity,
@@ -99,6 +103,7 @@ def compare_snapshots(
                     change_type=ChangeRecord.ChangeType.STOCK_CHANGED,
                     sku_id=sku_id,
                     name=curr_item.name,
+                    model=curr_item.model,
                     detail="商品已下架/无货",
                 ))
             else:
@@ -106,6 +111,7 @@ def compare_snapshots(
                     change_type=ChangeRecord.ChangeType.STOCK_CHANGED,
                     sku_id=sku_id,
                     name=curr_item.name,
+                    model=curr_item.model,
                     detail="商品已恢复有货",
                 ))
 
