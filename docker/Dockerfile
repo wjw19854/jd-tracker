@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:v1.55.0-noble
+FROM mcr.microsoft.com/playwright/python:v1.60.0-noble
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ WORKDIR /app
 COPY src/ ./src/
 COPY pyproject.toml ./
 
-# Playwright 已预装在镜像中，仅安装额外依赖
+# playwright-stealth（playwright 已在基础镜像中，版本匹配）
 RUN pip install --no-cache-dir playwright-stealth
 
 ENV PYTHONPATH=/app/src

@@ -6,7 +6,7 @@ ACTIVE_HOURS="${JD_TRACKER_ACTIVE_HOURS:-}"  # e.g. "8-23"
 
 echo "============================================"
 echo " jd-tracker container started"
-echo " Interval: ${INTERVAL}s ($(echo "scale=1; $INTERVAL/60" | bc)m)"
+echo " Interval: ${INTERVAL}s ($((INTERVAL/60))m$((INTERVAL%60))s)"
 echo " Active hours: ${ACTIVE_HOURS:-全天}"
 echo " Headless: $JD_TRACKER_HEADLESS"
 echo " Chrome Channel: '${JD_TRACKER_CHROME_CHANNEL}'"
@@ -55,7 +55,7 @@ while true; do
         # 分段 sleep，每 60s 检查一次是否仍在活跃时段
         REMAINING=$INTERVAL
         while [ "$REMAINING" -gt 0 ] && is_active; do
-            local STEP=$((REMAINING > 60 ? 60 : REMAINING))
+            STEP=$((REMAINING > 60 ? 60 : REMAINING))
             sleep "$STEP"
             REMAINING=$((REMAINING - STEP))
         done

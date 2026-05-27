@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   jd-tracker:
     build:
@@ -22,7 +20,7 @@ services:
       # 登录重试（headless 下设置较小值，省得出问题等太久）
       - JD_TRACKER_LOGIN_MAX_RETRIES=5
     volumes:
-      # 持久化数据（快照 + 登录态）
-      - ../data:/app/data
-      # 日志
-      - ../logs:/app/logs
+      # 持久化数据（快照 + 登录态）→ 存放在 compose 同级目录 docker/data/
+      - ./data:/app/data
+      # 日志 → docker/logs/
+      - ./logs:/app/logs
