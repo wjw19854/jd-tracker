@@ -19,6 +19,15 @@ services:
       - JD_TRACKER_LOG_DIR=/app/logs
       # 登录重试（headless 下设置较小值，省得出问题等太久）
       - JD_TRACKER_LOGIN_MAX_RETRIES=5
+      # --- 通知配置（PushPlus 微信推送）---
+      # 启用通知后，降价和异常告警都会推送
+      # - JD_TRACKER_NOTIFY_ENABLED=true
+      # PushPlus token（必填，在 pushplus.plus 获取）
+      # - JD_TRACKER_NOTIFY_PUSHPLUS_TOKEN=your_token
+      # PushPlus 群组编号（可选，非空时推送到指定群组）
+      # - JD_TRACKER_NOTIFY_PUSHPLUS_TOPIC=
+      # 仅降价通知（true），false 时所有变化都通知
+      - JD_TRACKER_NOTIFY_PRICE_DROP_ONLY=true
     volumes:
       # 持久化数据（快照 + 登录态）→ 存放在 compose 同级目录 docker/data/
       - ./data:/app/data
