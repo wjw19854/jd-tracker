@@ -60,6 +60,11 @@
 ### 2. 系统 Chrome navigator.webdriver 检测逻辑（已修复 v0.2.0）
 - JS `undefined` → Python `None`，之前误报 WARNING，已修正判断逻辑
 
+### 2.5 page.route 反检测效果（v0.2.1）
+- `page.route("**/*")` 启用 CDP Fetch 域，改变底层网络栈，意外帮助绕过京东检测
+- 现已始终启用，不再依赖 `--dump-html` 参数
+- 网络日志降为 DEBUG 级别
+
 ### 3. 虚拟列表滚动可能不完整
 - 京东购物车使用 React 虚拟列表，当前用分段跳转（10 段 + 反向）覆盖
 - 如果商品超过 ~200 件可能需要增加段数
