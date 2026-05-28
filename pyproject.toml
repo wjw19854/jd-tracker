@@ -1,6 +1,6 @@
 [project]
 name = "jd-tracker"
-version = "0.3.2"
+version = "0.3.3"
 description = "京东购物车价格监控工具"
 readme = "README.md"
 requires-python = ">=3.12"

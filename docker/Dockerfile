@@ -7,7 +7,7 @@ COPY src/ ./src/
 COPY pyproject.toml ./
 
 # playwright-stealth（playwright 已在基础镜像中，版本匹配）
-RUN pip install --no-cache-dir playwright-stealth
+RUN pip install --no-cache-dir -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple playwright-stealth
 
 ENV PYTHONPATH=/app/src
 ENV JD_TRACKER_HEADLESS=true
