@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2026-05-28
+
+- 调整docker时区为中国时区
+
 ## [0.3.1] - 2026-05-27
 
 - 修正 docker compose 文件增加新环境变量选项及说明

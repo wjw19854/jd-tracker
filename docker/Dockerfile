@@ -15,6 +15,10 @@ ENV JD_TRACKER_CHROME_CHANNEL=""
 ENV JD_TRACKER_DATA_DIR=/app/data
 ENV JD_TRACKER_LOG_DIR=/app/logs
 
+# 设置时区为中国标准时间
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # 创建数据/日志目录
 RUN mkdir -p /app/data /app/logs
 
